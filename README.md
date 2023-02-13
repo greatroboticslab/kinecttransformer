@@ -4,3 +4,7 @@ This is the kinect transfomer code. It is based on Tarnet.
 
 https://github.com/ranakroychowdhury/TARNet
 
+# notes
+original data for Tarnet test link
+https://www.timeseriesclassification.com/description.php?Dataset=AtrialFibrillation
+

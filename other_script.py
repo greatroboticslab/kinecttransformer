@@ -10,10 +10,6 @@ from os.path import join
 from torch.utils.data import TensorDataset, DataLoader
 from kinect_learning import * #(joints_collection, load_data, SVM, Random_Forest, AdaBoost, Gaussian_NB, Knn, Neural_Network)
 
-DATA_DIR = 'data'
-FILE_NAME = 'bending.csv'
-FILE_PATH = join(DATA_DIR, FILE_NAME)
-
 
 def create_datasets(x, y, test_size=0.4):
     x = np.asarray(x, dtype=np.float64)
@@ -31,7 +27,7 @@ def create_datasets(x, y, test_size=0.4):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, default='AF')
+parser.add_argument('--dataset', type=str, default='THIS-DOESNT-EXIST-AND-SHOULD-NEVER-BE-USED')
 parser.add_argument('--batch', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.01)
 parser.add_argument('--nlayers', type=int, default=2)
@@ -48,11 +44,12 @@ parser.add_argument('--nhid', type=int, default=128)
 parser.add_argument('--nhid_task', type=int, default=128)
 parser.add_argument('--nhid_tar', type=int, default=128)
 parser.add_argument('--task_type', type=str, default='classification', help='[classification, regression]')
+parser.add_argument('--data-file-name', type=str)
 args = parser.parse_args()
 
 
 
-def main():
+def main():    
     DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else "cpu")
     prop = utils.get_prop(args)
     prop['task_type'] = 'classification'
@@ -69,15 +66,10 @@ def main():
     prop['nlayers'] = 4
     prop['dropout'] = 0.1
 
-    path = './data/' + prop['dataset'] + '/'
-    print('Data loading start...')
-    X_train, y_train, X_test, y_test = utils.data_loader(args.dataset, path, prop['task_type'])
-    print('Data loading complete...')
-    print([item.shape for item in [X_train, y_train, X_test, y_test]])
-    print([item.dtype for item in [X_train, y_train, X_test, y_test]])
-    print('A1: {}'.format(type(X_train)))
-
-
+    DATA_DIR = 'data'
+    FILE_NAME = args.data_file_name #'bending.csv'
+    print(f'Running on {FILE_NAME}')
+    FILE_PATH = join(DATA_DIR, FILE_NAME)
 
     print('Data loading start...')
     COLLECTION = joints_collection('bending')
@@ -98,17 +90,12 @@ def main():
     actual_length =  X.shape[0] - divsion
     X = X[0:actual_length,:]
     Y = Y[0:actual_length]
-    print('HERE: {}'.format((X.shape, Y.shape)))
     (X_train, y_train), (X_test, y_test) = create_datasets(X, Y)
     print('Data loading complete...')
-    print([item.shape for item in [X_train, y_train, X_test, y_test]])
-    print([item.dtype for item in [X_train, y_train, X_test, y_test]])
-    print('A2: {}'.format(type(X_train)))
     
 
     print('Data preprocessing start...')
     X_train_task, y_train_task, X_test, y_test = utils.preprocess(prop, X_train, y_train, X_test, y_test)
-    print(X_train_task.shape, y_train_task.shape, X_test.shape, y_test.shape)
     print('Data preprocessing complete...')
 
     prop['nclasses'] = torch.max(y_train_task).item() + 1 if prop['task_type'] == 'classification' else None

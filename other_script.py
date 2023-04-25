@@ -14,6 +14,13 @@ from kinect_learning import * #(joints_collection, load_data, SVM, Random_Forest
 def create_datasets(x, y, test_size=0.4):
     x = np.asarray(x, dtype=np.float64)
     y = np.asarray(y, dtype=np.int64)
+    print(x.shape)
+    print(y.shape)
+    # Shuffle
+    indices = np.array(range(0, x.shape[0]))
+    #np.random.shuffle(indices)
+    x = np.take(x, indices, axis=0)
+    y = np.take(y, indices)
 
     division = x.shape[0] % 200
     actual_length =  x.shape[0] - division
@@ -54,17 +61,17 @@ def main():
     prop = utils.get_prop(args)
     prop['task_type'] = 'classification'
     prop['device'] = DEVICE
-    prop['nclasses'] = 2
+    prop['nclasses'] = 3
     prop['seq_len'] = 2
     prop['batch'] = 200
     prop['input_size'] = 3
     prop['emb_size'] = 4
-    prop['nhead'] = 4
+    prop['nhead'] = 1
     prop['nhid'] = 4
     prop['nhid_tar'] = 4
     prop['nhid_task'] = 4
     prop['nlayers'] = 4
-    prop['dropout'] = 0.1
+    prop['dropout'] = 0.2
 
     DATA_DIR = 'data'
     FILE_NAME = args.data_file_name #'bending.csv'
@@ -72,7 +79,9 @@ def main():
     FILE_PATH = join(DATA_DIR, FILE_NAME)
 
     print('Data loading start...')
-    COLLECTION = joints_collection('bending')
+    print(FILE_NAME.rstrip('.csv'))
+    COLLECTION = joints_collection(FILE_NAME.rstrip('.csv'))
+    assert COLLECTION
     print("Printing scores of small collection...")
     print("Collection includes", COLLECTION)
     print("Printing scores of small collection with noise data...")

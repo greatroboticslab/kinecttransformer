@@ -1,3 +1,4 @@
+import argparse
 import os.path
 import glob
 import tensorflow as tf
@@ -6,11 +7,10 @@ from kinect_learning import * #(joints_collection, load_data, SVM, Random_Forest
 
 DATA_DIR = 'data'
 
-def train_model(data_file_name, epochs):
+def train_model(data_file_name, epochs, noise):
     # 1. Load Data
     file_path = os.path.join(DATA_DIR, data_file_name)
     data_collection = joints_collection(data_file_name.rstrip('.csv'))
-    noise = False
     data = load_data_multiple_dimension(
         file_path,
         data_collection,
@@ -82,13 +82,17 @@ def create_datasets(x, y, test_size=0.4):
     return (x_train, y_train), (x_valid, y_valid)
     
 if __name__ == '__main__':
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('--noise', default=False, action=argparse.BooleanOptionalAction)
     FILE_NAMES = list(map(os.path.basename, glob.glob('./data/*.csv')))
     print('Training on files: {}'.format(FILE_NAMES))
+    ARGS = PARSER.parse_args()
+    print(f'Noise: {ARGS.noise}')
 
     TRAINING_ATTEMPTS = 20
     EPOCHS=200
     RESULT = {
-        file_name: [train_model(file_name, epochs=EPOCHS) for _ in range(TRAINING_ATTEMPTS)]
+        file_name: [train_model(file_name, epochs=EPOCHS, noise=ARGS.noise) for _ in range(TRAINING_ATTEMPTS)]
         for file_name in FILE_NAMES
     }
     BEST_RESULTS = {

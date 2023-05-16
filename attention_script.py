@@ -1,40 +1,65 @@
-import argparse
+import os.path
+import glob
 import tensorflow as tf
 import tensorflow.keras as keras
-from os.path import join
 from kinect_learning import * #(joints_collection, load_data, SVM, Random_Forest, AdaBoost, Gaussian_NB, Knn, Neural_Network)
 
+DATA_DIR = 'data'
 
-QUERY_INPUT = keras.Input(shape=(14, 3), dtype='float64')
-VALUE_INPUT = keras.Input(shape=(14, 3), dtype='float64')
+def train_model(data_file_name, epochs):
+    # 1. Load Data
+    file_path = os.path.join(DATA_DIR, data_file_name)
+    data_collection = joints_collection(data_file_name.rstrip('.csv'))
+    noise = False
+    data = load_data_multiple_dimension(
+        file_path,
+        data_collection,
+        noise
+    )
+    (train_x, train_y), (val_x, val_y) = create_datasets(data['positions'], data['labels'])
+    
+    query_input = keras.Input(shape=train_x[0].shape, dtype='float64')
+    value_input = keras.Input(shape=train_x[0].shape, dtype='float64')
 
-CONVOLUTION_LAYER = keras.layers.DepthwiseConv1D(
-    kernel_size=4,
-    padding='same'
-)
+    convolution_layer = keras.layers.DepthwiseConv1D(
+        kernel_size=4,
+        padding='same'
+    )
 
-CONVOLVED_QUERY = CONVOLUTION_LAYER(QUERY_INPUT)
-CONVOLVED_VALUE = CONVOLUTION_LAYER(VALUE_INPUT)
+    # 2. Build Model With Correct Shape
+    convolved_query = convolution_layer(query_input)
+    convolved_value = convolution_layer(value_input)
+    
+    attention_layer = keras.layers.Attention()(
+        [convolved_query, convolved_value]
+    )
 
-ATTENTION_LAYER = keras.layers.Attention()(
-    [CONVOLVED_QUERY, CONVOLVED_VALUE]
-)
+    flatten_layer = keras.layers.Flatten()(attention_layer)
 
-FLATTEN_LAYER = keras.layers.Flatten()(ATTENTION_LAYER)
+    dense_layer = keras.layers.Dense(32, kernel_initializer='he_normal')(flatten_layer)
 
-DENSE_LAYER = keras.layers.Dense(32)(FLATTEN_LAYER)
+    model = keras.Model(
+        inputs=[query_input, value_input],
+        outputs=[dense_layer],
+        name='attention-model'
+    )
 
-MODEL = keras.Model(
-    inputs=[QUERY_INPUT, VALUE_INPUT],
-    outputs=[DENSE_LAYER],
-    name='attention-model'
-)
-
-MODEL.compile(
-    loss='sparse_categorical_crossentropy',
-    optimizer='sgd'
-)
-
+    model.compile(
+        loss=keras.losses.SparseCategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(),
+        metrics=[tf.keras.metrics.SparseCategoricalCrossentropy(), 'accuracy']
+    )
+    
+    # 3. Train Model With Data
+    history = model.fit(
+        (train_x, train_x),
+        train_y,
+        validation_data=((val_x, val_x), val_y),
+        epochs=epochs,
+        callbacks=[]
+    )
+    model.predict((val_x, val_x)) # Make sure this works.
+    return model, history
 
     
 def create_datasets(x, y, test_size=0.4):
@@ -54,37 +79,21 @@ def create_datasets(x, y, test_size=0.4):
     y = y[0:actual_length]
 
     x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.4)
-
-
     return (x_train, y_train), (x_valid, y_valid)
     
 if __name__ == '__main__':
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument('--data-file-name', type=str)
-    ARGS = PARSER.parse_args()
-    DATA_DIR = 'data'
-    FILE_NAME = ARGS.data_file_name #'bending.csv'
-    print(f'Running on {FILE_NAME}')
-    FILE_PATH = join(DATA_DIR, FILE_NAME)
-    
-    print('Data loading start...')
-    print(FILE_NAME.rstrip('.csv'))
-    COLLECTION = joints_collection(FILE_NAME.rstrip('.csv'))
-    assert COLLECTION
-    print("Printing scores of small collection...")
-    print("Collection includes", COLLECTION)
-    print("Printing scores of small collection with noise data...")
-    NOISE = False
-    DATA = load_data_multiple_dimension(
-        FILE_PATH,
-        COLLECTION,
-        NOISE
-    )
-    (TRAIN_X, TRAIN_Y), (VAL_X, VAL_Y) = create_datasets(DATA['positions'], DATA['labels'])
-    MODEL.fit(
-        tf.data.Dataset.zip(tf.data.Dataset.zip((tf.data.Dataset(TRAIN_X), tf.data.Dataset(TRAIN_X))), tf.data.Dataset(TRAIN_Y)).batch(32),
+    FILE_NAMES = list(map(os.path.basename, glob.glob('./data/*.csv')))
+    print('Training on files: {}'.format(FILE_NAMES))
 
-        validation_data=((VAL_X, VAL_X), VAL_Y),
-        callbacks=[]#EARLY_STOPPING_CB, TENSOR_BOARD_CB]
-    )
-    MODEL.predict(VAL_X)
+    TRAINING_ATTEMPTS = 20
+    EPOCHS=200
+    RESULT = {
+        file_name: [train_model(file_name, epochs=EPOCHS) for _ in range(TRAINING_ATTEMPTS)]
+        for file_name in FILE_NAMES
+    }
+    BEST_RESULTS = {
+        file_name: max(trained_models, key=lambda model: model[1].history['val_accuracy'])
+        for file_name, trained_models in RESULT.items()
+    }
+    for DATA_FILE, BEST_RESULT in BEST_RESULTS.items():
+        print(DATA_FILE, BEST_RESULT[1].history['val_accuracy'][-1])

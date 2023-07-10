@@ -1,13 +1,10 @@
-# kinecttransformer
+# Summary
 
-This is the kinect transfomer code. It is based on Tarnet. 
+This is the kinect transfomer code. It is based on an attention network tutorial from tensorflow. 
 
-https://github.com/ranakroychowdhury/TARNet
 
-# to run
-`python3 other_scrip.py`
+# Running
+`python3 attention_script.py --help`
 
-# notes
-original data for Tarnet test link
-https://www.timeseriesclassification.com/description.php?Dataset=AtrialFibrillation
+Use the `--noise` parameter to control noise for graphics.
 

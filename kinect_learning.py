@@ -12,11 +12,11 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 #from sklearn.gaussian_process import GaussianProcess
 from sklearn.model_selection import cross_validate
-from pybrain.datasets 			 import ClassificationDataSet
-from pybrain.utilities           import percentError
-from pybrain.tools.shortcuts     import buildNetwork
-from pybrain.supervised.trainers import BackpropTrainer
-from pybrain.structure.modules   import SoftmaxLayer
+#from pybrain.datasets 			 import ClassificationDataSet
+#from pybrain.utilities           import percentError
+#from pybrain.tools.shortcuts     import buildNetwork
+#from pybrain.supervised.trainers import BackpropTrainer
+#from pybrain.structure.modules   import SoftmaxLayer
 
 
 # "left-right" : ['KneeRight', 'KneeLeft', 'AnkleRight', 'AnkleLeft', 'FootRight', 'FootLeft'],
